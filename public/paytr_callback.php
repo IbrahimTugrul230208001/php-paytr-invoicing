@@ -1,6 +1,6 @@
 <?php
 
-use App\Invoice\InvoiceFactory;
+use App\Invoice\PurchaseBillFactory;
 use App\Parasut\ParasutClient;
 use App\Paytr\CallbackHandler;
 use App\Paytr\SignatureValidator;
@@ -20,14 +20,15 @@ try {
     );
     $httpClient = new HttpClient();
     $parasutClient = new ParasutClient($httpClient, $logger, $config['parasut']);
-    $invoiceFactory = new InvoiceFactory();
+    $purchaseBillFactory = new PurchaseBillFactory();
 
     $handler = new CallbackHandler(
         $validator,
         $parasutClient,
-        $invoiceFactory,
+        $purchaseBillFactory,
         $logger,
-        $config['invoice']
+        $config['invoice'],
+        $config['paytr']
     );
 
     $result = $handler->handle($payload);
