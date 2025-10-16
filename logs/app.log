@@ -1,0 +1,5 @@
+[2025-10-16T16:22:13+00:00] ERROR: Unhandled exception {"message":"Failed opening required 'C:\\Users\\Lenovo\\OneDrive\\Desktop\\PHP projeleri\\Fatura Kesme PAYTR ile/tests/fixtures/paytr_callback_sample.php' (include_path='.;C:\\php\\pear')"}
+[2025-10-16T17:31:32+00:00] ERROR: Purchase bill create failed {"error":"Call to undefined function App\\Support\\curl_init()"}
+[2025-10-16T17:51:45+00:00] ERROR: Purchase bill create failed {"error":"Call to undefined function App\\Support\\curl_init()"}
+[2025-10-16T17:55:26+00:00] INFO: Rendered HTML invoice preview {"net":444,"vat":88.8,"gross":532.8}
+[2025-10-16T18:18:28+00:00] INFO: Rendered HTML invoice preview {"net":66,"vat":13.2,"gross":79.2}

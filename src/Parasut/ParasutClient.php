@@ -6,7 +6,7 @@ use App\Support\HttpClient;
 use App\Support\Logger;
 use RuntimeException;
 
-class ParasutClient
+class ParasutClient implements PurchaseBillClient
 {
     private HttpClient $httpClient;
     private Logger $logger;

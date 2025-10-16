@@ -13,21 +13,28 @@ class PurchaseBillFactory
             throw new RuntimeException('Paraşüt supplier ID must be configured.');
         }
 
-        $amount = $this->extractAmount($payload);
+        // Allow unit_price override from form; fallback to PayTR-like amount mapping
+        $amount = isset($defaults['unit_price'])
+            ? (float) $defaults['unit_price']
+            : $this->extractAmount($payload);
+
         if ($amount <= 0) {
-            throw new RuntimeException('Unable to determine purchase amount from PayTR payload.');
+            throw new RuntimeException('Unable to determine unit price for purchase bill.');
         }
 
-        $itemDescription = $payload['product_name'] ?? $defaults['item_description'] ?? 'PayTR Purchase';
-        $descriptionPrefix = $defaults['description_prefix'] ?? 'PayTR purchase bill';
+        $quantity = isset($defaults['quantity']) ? (float) $defaults['quantity'] : 1.0;
+
+        $itemDescription   = $payload['product_name'] ?? $defaults['item_description'] ?? 'Kalem';
+        $descriptionPrefix = $defaults['description_prefix'] ?? 'Sipariş';
+        $rootDescription   = $defaults['description'] ?? sprintf('%s - %s', $descriptionPrefix, $payload['merchant_oid'] ?? 'unknown');
 
         $detail = [
             'type' => 'purchase_bill_details',
             'attributes' => [
-                'quantity' => 1,
-                'unit_price' => $amount,
-                'vat_rate' => $defaults['vat_rate'] ?? 18,
-                'description' => $itemDescription,
+                'quantity'     => $quantity,
+                'unit_price'   => $amount,
+                'vat_rate'     => isset($defaults['vat_rate']) ? (int) $defaults['vat_rate'] : 18,
+                'description'  => $itemDescription,
             ],
         ];
 
@@ -36,7 +43,7 @@ class PurchaseBillFactory
             $detail['relationships']['product'] = [
                 'data' => [
                     'type' => 'products',
-                    'id' => $productId,
+                    'id'   => $productId,
                 ],
             ];
         }
@@ -46,7 +53,7 @@ class PurchaseBillFactory
             $detail['relationships']['warehouse'] = [
                 'data' => [
                     'type' => 'warehouses',
-                    'id' => $warehouseId,
+                    'id'   => $warehouseId,
                 ],
             ];
         }
@@ -55,13 +62,11 @@ class PurchaseBillFactory
             'supplier' => [
                 'data' => [
                     'type' => 'contacts',
-                    'id' => $supplierId,
+                    'id'   => $supplierId,
                 ],
             ],
             'details' => [
-                'data' => [
-                    $detail,
-                ],
+                'data' => [$detail],
             ],
         ];
 
@@ -70,20 +75,26 @@ class PurchaseBillFactory
             $relationships['category'] = [
                 'data' => [
                     'type' => 'categories',
-                    'id' => $categoryId,
+                    'id'   => $categoryId,
                 ],
             ];
         }
+
+        // Allow overriding dates/currency/exchange_rate from form
+        $issueDate    = $defaults['issue_date'] ?? date('Y-m-d');
+        $dueDate      = $defaults['due_date'] ?? $issueDate;
+        $currency     = $defaults['currency'] ?? 'TRY';
+        $exchangeRate = isset($defaults['exchange_rate']) ? (float) $defaults['exchange_rate'] : 1.0;
 
         return [
             'data' => [
                 'type' => 'purchase_bills',
                 'attributes' => [
-                    'description' => sprintf('%s - %s', $descriptionPrefix, $payload['merchant_oid'] ?? 'unknown'),
-                    'issue_date' => date('Y-m-d'),
-                    'due_date' => date('Y-m-d'),
-                    'currency' => $defaults['currency'] ?? 'TRY',
-                    'exchange_rate' => 1,
+                    'description'   => $rootDescription,
+                    'issue_date'    => $issueDate,
+                    'due_date'      => $dueDate,
+                    'currency'      => $currency,
+                    'exchange_rate' => $exchangeRate,
                 ],
                 'relationships' => $relationships,
             ],
@@ -95,15 +106,12 @@ class PurchaseBillFactory
         if (isset($payload['payment_amount'])) {
             return round(((float) $payload['payment_amount']) / 100, 2);
         }
-
         if (isset($payload['total_amount'])) {
             return round((float) $payload['total_amount'], 2);
         }
-
         if (isset($payload['amount'])) {
             return round((float) $payload['amount'], 2);
         }
-
         return 0.0;
     }
 }

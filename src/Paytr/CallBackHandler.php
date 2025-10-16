@@ -3,14 +3,14 @@
 namespace App\Paytr;
 
 use App\Invoice\PurchaseBillFactory;
-use App\Parasut\ParasutClient;
+use App\Parasut\PurchaseBillClient;
 use App\Support\Logger;
 use RuntimeException;
 
 class CallbackHandler
 {
-    private SignatureValidator $validator;
-    private ParasutClient $parasutClient;
+    private DummySignatureValidator $validator;
+    private PurchaseBillClient $parasutClient;
     private PurchaseBillFactory $purchaseBillFactory;
     private Logger $logger;
     private array $invoiceDefaults;
@@ -18,8 +18,8 @@ class CallbackHandler
     private array $dummyPayloadDefaults;
 
     public function __construct(
-        SignatureValidator $validator,
-        ParasutClient $parasutClient,
+        DummySignatureValidator $validator,
+        PurchaseBillClient $parasutClient,
         PurchaseBillFactory $purchaseBillFactory,
         Logger $logger,
         array $invoiceDefaults,

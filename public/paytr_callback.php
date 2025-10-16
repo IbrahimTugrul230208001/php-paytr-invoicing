@@ -1,47 +1,43 @@
 <?php
 
 use App\Invoice\PurchaseBillFactory;
-use App\Parasut\ParasutClient;
+use App\Parasut\HtmlInvoiceClient;
+use App\Paytr\DummySignatureValidator;
 use App\Paytr\CallbackHandler;
-use App\Paytr\SignatureValidator;
-use App\Support\HttpClient;
 use App\Support\Logger;
 
 require __DIR__ . '/../bootstrap.php';
 
-$logger = new Logger($config['invoice']['log_path']);
+$invoiceConfig = array_merge([
+    'supplier_id' => 'DUMMY-SUPPLIER-ID',
+    'vat_rate' => 18,
+    'currency' => 'TRY',
+    'description_prefix' => 'Dummy PAYTR purchase bill',
+    'item_description' => 'Dummy item',
+    'log_path' => null,
+], $config['invoice'] ?? []);
+
+$logger = new Logger($invoiceConfig['log_path']);
 
 try {
-    $payload = $_POST ?: json_decode(file_get_contents('php://input'), true) ?: [];
-
-    $validator = new SignatureValidator(
-        $config['paytr']['merchant_key'],
-        $config['paytr']['merchant_salt']
-    );
-    $httpClient = new HttpClient();
-    $parasutClient = new ParasutClient($httpClient, $logger, $config['parasut']);
-    $purchaseBillFactory = new PurchaseBillFactory();
+    $payload = require dirname(__DIR__) . '/tests/fixtures/paytr_callback_sample.php';
 
     $handler = new CallbackHandler(
-        $validator,
-        $parasutClient,
-        $purchaseBillFactory,
+        new DummySignatureValidator(),
+        new HtmlInvoiceClient($logger, ['brand' => 'Demo Ön Fatura']),
+        new PurchaseBillFactory(),
         $logger,
-        $config['invoice'],
-        $config['paytr']
+        $invoiceConfig,
+        ['use_dummy_payload' => true]
     );
 
     $result = $handler->handle($payload);
 
     http_response_code(200);
-    header('Content-Type: application/json');
-    echo json_encode($result);
+    header('Content-Type: text/html; charset=utf-8');
+    echo $result['purchase_bill']['html'] ?? '<p>Render error</p>';
 } catch (Throwable $exception) {
-    $logger->error('Unhandled exception', [
-        'message' => $exception->getMessage(),
-    ]);
-
+    $logger->error('Unhandled exception', ['message' => $exception->getMessage()]);
     http_response_code(500);
-    header('Content-Type: application/json');
-    echo json_encode(['status' => 'error', 'message' => $exception->getMessage()]);
+    echo "<h1 style='color:#ef4444'>Hata</h1><p>{$exception->getMessage()}</p><p><a href='/index.php'>Geri dön</a></p>";
 }
