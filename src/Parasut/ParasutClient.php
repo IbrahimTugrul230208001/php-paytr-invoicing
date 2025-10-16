@@ -20,21 +20,30 @@ class ParasutClient
         $this->config = $config;
     }
 
-    public function createInvoice(array $invoiceData): array
+    public function createPurchaseBill(array $purchaseBillData): array
     {
+        if (empty($this->config['company_id'])) {
+            throw new RuntimeException('Paraşüt company ID is not configured.');
+        }
+
+        if (empty($this->config['base_url'])) {
+            throw new RuntimeException('Paraşüt base URL is not configured.');
+        }
+
         $token = $this->getAccessToken();
-        $url = rtrim($this->config['base_url'], '/') . '/v4/' . $this->config['company_id'] . '/sales_invoices';
+        $url = rtrim($this->config['base_url'], '/') . '/v4/' . $this->config['company_id'] . '/purchase_bills';
 
         $response = $this->httpClient->postJson($url, [
             'Authorization: Bearer ' . $token,
-        ], $invoiceData);
+            'Accept: application/json',
+        ], $purchaseBillData);
 
         if ($response['status'] >= 400) {
-            $this->logger->error('Failed to create invoice', $response);
-            throw new RuntimeException('Paraşüt invoice creation failed with status ' . $response['status']);
+            $this->logger->error('Failed to create purchase bill', $response);
+            throw new RuntimeException('Paraşüt purchase bill creation failed with status ' . $response['status']);
         }
 
-        $this->logger->info('Invoice created in Paraşüt', $response['body']);
+        $this->logger->info('Purchase bill created in Paraşüt', $response['body'] ?? []);
 
         return $response['body'];
     }
@@ -43,6 +52,12 @@ class ParasutClient
     {
         if ($this->accessToken !== null) {
             return $this->accessToken;
+        }
+
+        foreach (['base_url', 'client_id', 'client_secret', 'username', 'password'] as $key) {
+            if (empty($this->config[$key])) {
+                throw new RuntimeException(sprintf('Paraşüt configuration value "%s" is missing.', $key));
+            }
         }
 
         $url = rtrim($this->config['base_url'], '/') . '/oauth/token';
